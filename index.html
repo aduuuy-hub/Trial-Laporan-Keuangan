@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uji Coba Keuangan — Nov & Des 2026</title>
+  <style>
+    :root {
+      --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+      --primary: #0f766e; --primary-hover: #115e59; --danger: #dc2626; --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 18px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 1.35rem; }
+    .subtitle { color: var(--muted); font-size: 0.88rem; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    select, input, button { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.9rem; background: #fff; }
+    button { background: var(--primary); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+    button:hover { background: var(--primary-hover); }
+    button.secondary { background: #334155; }
+    button.danger { background: var(--danger); padding: 5px 9px; font-size: 0.8rem; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab-btn { background: #e2e8f0; color: var(--text); border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .tab-btn.active { background: var(--primary); color: #fff; }
+    .grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .kpi-label { font-size: 0.76rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-value { font-size: 1.3rem; font-weight: 700; margin: 6px 0 4px; }
+    .kpi-sub { font-size: 0.8rem; color: var(--muted); }
+    .text-danger { color: var(--danger) !important; }
+    .grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 780px) { .grid-two { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+    input, select { width: 100%; }
+    .toolbar select { width: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+    .bar-wrap { background: #e2e8f0; border-radius: 999px; height: 8px; overflow: hidden; margin-top: 6px; }
+    .bar-fill { background: var(--primary); height: 100%; transition: width 0.25s ease; }
+    .hidden { display: none; }
+    .toast { font-size: 0.85rem; color: var(--primary); margin-top: 8px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Uji Coba Laporan Keuangan (Nov & Des 2026)</h1>
+        <div class="subtitle" id="syncStatus">Menghubungkan ke Google Sheets Uji Coba...</div>
+      </div>
+      <div class="toolbar">
+        <select id="monthSelect" onchange="changeMonth()"></select>
+        <button class="secondary" onclick="syncFromCloud()">Refresh Data</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="btnTabDashboard" onclick="switchTab('dashboard')">Dashboard & Kategori</button>
+      <button class="tab-btn" id="btnTabInput" onclick="switchTab('input')">Input Pengeluaran</button>
+      <button class="tab-btn" id="btnTabSetup" onclick="switchTab('setup')">Pemasukan, Tabungan & Hutang</button>
+    </div>
+
+    <div id="tabDashboard">
+      <div class="grid-kpi">
+        <div class="card">
+          <div class="kpi-label">Total Pemasukan</div>
+          <div class="kpi-value" id="kpiIncome">Rp0</div>
+          <div class="kpi-sub" id="kpiIncomeSub">Aktif: Rp0 | Pasif: Rp0</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Realisasi Pengeluaran</div>
+          <div class="kpi-value" id="kpiExpenses">Rp0</div>
+          <div class="kpi-sub" id="kpiRemaining">Sisa Kas Operasional: Rp0</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Target Tabungan Wajib (20%)</div>
+          <div class="kpi-value" id="kpiMandatorySaving">Rp0</div>
+          <div class="kpi-sub" id="kpiNetSavingSub">Tabungan Bersih Bulan Ini: Rp0</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Rasio Cicilan (DSR)</div>
+          <div class="kpi-value" id="kpiDsr">0.0%</div>
+          <div class="kpi-sub">Batas aman ideal maks. 35%</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Akumulasi Tabungan (Nov–Des)</div>
+          <div class="kpi-value" id="kpiCumSaving">Rp0</div>
+          <div class="kpi-sub" id="kpiSavingTargetSub">Target: Rp0</div>
+        </div>
+        <div class="card">
+          <div class="kpi-label">Total Sisa Hutang</div>
+          <div class="kpi-value" id="kpiDebt">Rp0</div>
+          <div class="kpi-sub">Berkurang otomatis saat bayar cicilan</div>
+        </div>
+      </div>
+
+      <div class="grid-two">
+        <div class="card">
+          <h3 style="margin-top:0;">Pengeluaran per Kategori</h3>
+          <div id="categoryBreakdown"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">Riwayat Transaksi Bulan Ini</h3>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th><th>Kategori</th><th>Detail</th><th>Akun</th>
+                  <th style="text-align:right;">Jumlah</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="txTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabInput" class="hidden">
+      <div class="card" style="max-width:540px;">
+        <h3 style="margin-top:0;">Catat Pengeluaran Uji Coba</h3>
+        <form onsubmit="addTransaction(event)">
+          <div class="form-group">
+            <label for="txDate">Tanggal Transaksi</label>
+            <input type="date" id="txDate" required />
+          </div>
+          <div class="form-group">
+            <label for="txAccount">Akun / Metode Pembayaran</label>
+            <select id="txAccount">
+              <option value="BCA">BCA</option>
+              <option value="Dana">Dana</option>
+              <option value="Shopeepay">Shopeepay</option>
+              <option value="Tunai">Tunai</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="txCategory">Kategori</label>
+            <select id="txCategory" required>
+              <option value="Cicilan Utama">Cicilan Utama</option>
+              <option value="Cicilan Sementara">Cicilan Sementara</option>
+              <option value="Listrik">Listrik</option>
+              <option value="Kebutuhan Rumah">Kebutuhan Rumah</option>
+              <option value="Bensin">Bensin</option>
+              <option value="Uang Saku Yudha">Uang Saku Yudha</option>
+              <option value="Uang Saku Fadhilah">Uang Saku Fadhilah</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Internet">Internet</option>
+              <option value="Kebutuhan Peliharaan">Kebutuhan Peliharaan</option>
+              <option value="IPL & Kas">IPL & Kas</option>
+              <option value="Sedekah/ Keluarga">Sedekah/ Keluarga</option>
+              <option value="Laundry">Laundry</option>
+              <option value="Biaya tak terduga/ Lain-lain">Biaya tak terduga/ Lain-lain</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="txDetail">Detail Kebutuhan</label>
+            <input type="text" id="txDetail" placeholder="Contoh: Belanja dapur / Token PLN" required />
+          </div>
+          <div class="form-group">
+            <label for="txAmount">Jumlah Biaya (Rp)</label>
+            <input type="number" id="txAmount" min="1" placeholder="Contoh: 150000" required />
+          </div>
+          <button type="submit">Simpan ke Google Sheets</button>
+          <div class="toast" id="txToast"></div>
+        </form>
+      </div>
+    </div>
+
+    <div id="tabSetup" class="hidden">
+      <div class="card" style="max-width:560px;">
+        <h3 style="margin-top:0;">Pemasukan, Tabungan & Hutang Bulan Ini</h3>
+        <form onsubmit="saveMonthlySettings(event)">
+          <div class="form-group">
+            <label for="inYudha">Pendapatan Aktif Yudha (Rp)</label>
+            <input type="number" id="inYudha" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inFadhilah">Pendapatan Aktif Fadhilah (Rp)</label>
+            <input type="number" id="inFadhilah" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inPassive">Pendapatan Pasif / Tambahan (Rp)</label>
+            <input type="number" id="inPassive" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inExtraSaving">Tabungan Tambahan Lain-lain (Rp)</label>
+            <input type="number" id="inExtraSaving" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inWithdrawal">Penarikan / Pengeluaran Impulsif Tabungan (Rp)</label>
+            <input type="number" id="inWithdrawal" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inSavingTarget">Target Tabungan (Rp)</label>
+            <input type="number" id="inSavingTarget" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="inDebtBase">Saldo Pokok Hutang Awal (Rp)</label>
+            <input type="number" id="inDebtBase" min="0" />
+          </div>
+          <button type="submit">Simpan Pengaturan ke Sheets</button>
+          <div class="toast" id="setupToast"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwM7kFeiomWNCoyV8pzml6UE6oiLiXT1Xcb2__hRxPHFvsP8JwQRJ5LTc-S81IKe6EwVg/exec';
+    const MONTHS = ['November', 'Desember'];
+    const MONTH_NUMBERS = { November: '11', Desember: '12' };
+    const DEBT_CATEGORIES = ['Cicilan Utama', 'Cicilan Sementara'];
+    const LOCAL_KEY = 'uji_coba_nov_des_2026_sheets_cache';
+
+    let selectedMonth = 'November';
+    let allTransactions = [];
+    let allSettings = {};
+
+    const formatRp = (n) => 'Rp' + Number(n || 0).toLocaleString('id-ID');
+
+    function loadLocalCache() {
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        allTransactions = parsed.transactions || [];
+        allSettings = parsed.settings || {};
+      } catch (e) {}
+    }
+
+    function saveLocalCache() {
+      try {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify({
+          transactions: allTransactions,
+          settings: allSettings
+        }));
+      } catch (e) {}
+    }
+
+    function init() {
+      loadLocalCache();
+      const sel = document.getElementById('monthSelect');
+      sel.innerHTML = MONTHS.map(m => `<option value="${m}">${m} 2026</option>`).join('');
+      setDefaultDate();
+      render();
+      syncFromCloud();
+    }
+
+    function setDefaultDate() {
+      const mm = MONTH_NUMBERS[selectedMonth] || '11';
+      document.getElementById('txDate').value = `2026-${mm}-01`;
+    }
+
+    function changeMonth() {
+      selectedMonth = document.getElementById('monthSelect').value;
+      setDefaultDate();
+      render();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabDashboard').classList.toggle('hidden', tab !== 'dashboard');
+      document.getElementById('tabInput').classList.toggle('hidden', tab !== 'input');
+      document.getElementById('tabSetup').classList.toggle('hidden', tab !== 'setup');
+      document.getElementById('btnTabDashboard').classList.toggle('active', tab === 'dashboard');
+      document.getElementById('btnTabInput').classList.toggle('active', tab === 'input');
+      document.getElementById('btnTabSetup').classList.toggle('active', tab === 'setup');
+    }
+
+    async function syncFromCloud() {
+      const statusEl = document.getElementById('syncStatus');
+      statusEl.textContent = 'Menyinkronkan November & Desember 2026...';
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        if (data.status === 'ok') {
+          allTransactions = (data.transactions || []).filter(t => MONTHS.includes(t.bulan));
+          allSettings = data.settings || {};
+          saveLocalCache();
+          statusEl.textContent = 'Uji Coba Nov & Des 2026 • Tersinkron dengan Sheets';
+        } else {
+          statusEl.textContent = 'Uji Coba Nov & Des 2026 • Gagal sinkron: ' + data.message;
+        }
+      } catch (err) {
+        statusEl.textContent = 'Uji Coba Nov & Des 2026 • Mode lokal (cek izin Anyone)';
+      }
+      render();
+    }
+
+    async function postAction(payload) {
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        });
+        setTimeout(syncFromCloud, 800);
+      } catch (e) {}
+    }
+
+    async function addTransaction(e) {
+      e.preventDefault();
+      const tx = {
+        id: Date.now(),
+        bulan: selectedMonth,
+        date: document.getElementById('txDate').value,
+        account: document.getElementById('txAccount').value,
+        category: document.getElementById('txCategory').value,
+        detail: document.getElementById('txDetail').value.trim(),
+        amount: Number(document.getElementById('txAmount').value)
+      };
+      allTransactions.push(tx);
+      saveLocalCache();
+      render();
+      document.getElementById('txDetail').value = '';
+      document.getElementById('txAmount').value = '';
+      document.getElementById('txToast').textContent = 'Menyimpan transaksi ke Google Sheets...';
+      await postAction({ action: 'addTx', tx });
+      setTimeout(() => document.getElementById('txToast').textContent = '', 2500);
+    }
+
+    async function deleteTransaction(id) {
+      allTransactions = allTransactions.filter(t => String(t.id) !== String(id));
+      saveLocalCache();
+      render();
+      await postAction({ action: 'deleteTx', id });
+    }
+
+    async function saveMonthlySettings(e) {
+      e.preventDefault();
+      const s = {
+        activeYudha: Number(document.getElementById('inYudha').value || 0),
+        activeFadhilah: Number(document.getElementById('inFadhilah').value || 0),
+        passiveIncome: Number(document.getElementById('inPassive').value || 0),
+        extraSaving: Number(document.getElementById('inExtraSaving').value || 0),
+        impulsiveWithdrawal: Number(document.getElementById('inWithdrawal').value || 0),
+        savingsTarget: Number(document.getElementById('inSavingTarget').value || 0),
+        debtBase: Number(document.getElementById('inDebtBase').value || 0)
+      };
+      allSettings[selectedMonth] = s;
+      saveLocalCache();
+      render();
+      document.getElementById('setupToast').textContent = 'Menyimpan pengaturan ke Google Sheets...';
+      await postAction({ action: 'saveMonthSettings', bulan: selectedMonth, settings: s });
+      setTimeout(() => document.getElementById('setupToast').textContent = '', 2500);
+    }
+
+    function getMonthSetting(mon) {
+      return allSettings[mon] || {
+        activeYudha: 0, activeFadhilah: 0, passiveIncome: 0,
+        extraSaving: 0, impulsiveWithdrawal: 0, savingsTarget: 0, debtBase: 0
+      };
+    }
+
+    function render() {
+      const s = getMonthSetting(selectedMonth);
+      const latestGlobal = MONTHS.slice().reverse().map(m => getMonthSetting(m)).find(x => x.savingsTarget > 0 || x.debtBase > 0) || s;
+
+      document.getElementById('inYudha').value = s.activeYudha || '';
+      document.getElementById('inFadhilah').value = s.activeFadhilah || '';
+      document.getElementById('inPassive').value = s.passiveIncome || '';
+      document.getElementById('inExtraSaving').value = s.extraSaving || '';
+      document.getElementById('inWithdrawal').value = s.impulsiveWithdrawal || '';
+      document.getElementById('inSavingTarget').value = latestGlobal.savingsTarget || '';
+      document.getElementById('inDebtBase').value = latestGlobal.debtBase || '';
+
+      const monthTx = allTransactions.filter(t => t.bulan === selectedMonth);
+      const activeIncome = Number(s.activeYudha || 0) + Number(s.activeFadhilah || 0);
+      const totalIncome = activeIncome + Number(s.passiveIncome || 0);
+      const totalExpenses = monthTx.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const debtExpenses = monthTx
+        .filter(t => DEBT_CATEGORIES.includes(t.category))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const mandatorySaving = Math.round(activeIncome * 0.20);
+      const netMonthlySaving = mandatorySaving + Number(s.extraSaving || 0) - Number(s.impulsiveWithdrawal || 0);
+      const remainingCash = totalIncome - mandatorySaving - totalExpenses;
+      const dsr = totalIncome > 0 ? (debtExpenses / totalIncome) * 100 : 0;
+
+      const curIdx = MONTHS.indexOf(selectedMonth);
+      let cumSaving = 0;
+      for (let i = 0; i <= curIdx; i++) {
+        const ms = getMonthSetting(MONTHS[i]);
+        const act = Number(ms.activeYudha || 0) + Number(ms.activeFadhilah || 0);
+        cumSaving += Math.round(act * 0.20) + Number(ms.extraSaving || 0) - Number(ms.impulsiveWithdrawal || 0);
+      }
+
+      const totalDebtPaid = allTransactions
+        .filter(t => DEBT_CATEGORIES.includes(t.category))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const remainingDebt = Math.max(0, Number(latestGlobal.debtBase || 0) - totalDebtPaid);
+
+      document.getElementById('kpiIncome').textContent = formatRp(totalIncome);
+      document.getElementById('kpiIncomeSub').textContent = `Aktif: ${formatRp(activeIncome)} | Pasif: ${formatRp(s.passiveIncome)}`;
+      document.getElementById('kpiExpenses').textContent = formatRp(totalExpenses);
+
+      const remEl = document.getElementById('kpiRemaining');
+      remEl.textContent = `Sisa Kas Operasional: ${formatRp(remainingCash)}`;
+      remEl.className = remainingCash < 0 ? 'kpi-sub text-danger' : 'kpi-sub';
+
+      document.getElementById('kpiMandatorySaving').textContent = formatRp(mandatorySaving);
+      document.getElementById('kpiNetSavingSub').textContent = `Tabungan Bersih Bulan Ini: ${formatRp(netMonthlySaving)}`;
+
+      const dsrEl = document.getElementById('kpiDsr');
+      dsrEl.textContent = `${dsr.toFixed(1)}%`;
+      dsrEl.className = dsr > 35 ? 'kpi-value text-danger' : 'kpi-value';
+
+      document.getElementById('kpiCumSaving').textContent = formatRp(cumSaving);
+      document.getElementById('kpiSavingTargetSub').textContent = `Target: ${formatRp(latestGlobal.savingsTarget)}`;
+      document.getElementById('kpiDebt').textContent = formatRp(remainingDebt);
+
+      const catTotals = {};
+      monthTx.forEach(t => {
+        catTotals[t.category] = (catTotals[t.category] || 0) + Number(t.amount || 0);
+      });
+      const catEntries = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+      const catBox = document.getElementById('categoryBreakdown');
+      if (catEntries.length === 0) {
+        catBox.innerHTML = '<div class="subtitle">Belum ada pengeluaran tercatat di bulan ini.</div>';
+      } else {
+        catBox.innerHTML = catEntries.map(([cat, amt]) => {
+          const pct = totalExpenses > 0 ? Math.round((amt / totalExpenses) * 100) : 0;
+          return `
+            <div style="margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.88rem;">
+                <span><strong>${cat}</strong> (${pct}%)</span>
+                <span>${formatRp(amt)}</span>
+              </div>
+              <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;"></div></div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const tbody = document.getElementById('txTableBody');
+      if (monthTx.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="subtitle">Belum ada transaksi.</td></tr>';
+      } else {
+        tbody.innerHTML = monthTx.slice().reverse().map(t => `
+          <tr>
+            <td>${t.date}</td>
+            <td>${t.category}</td>
+            <td>${t.detail}</td>
+            <td>${t.account}</td>
+            <td style="text-align:right; font-weight:600;">${formatRp(t.amount)}</td>
+            <td style="text-align:right;"><button class="danger" onclick="deleteTransaction('${t.id}')">Hapus</button></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
